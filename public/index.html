@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway's Game of Life with AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 20px;
+            padding: 20px;
+            flex-wrap: wrap;
+        }
+
+        .game-area {
+            flex: 2;
+            min-width: 600px;
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #00d4ff;
+            font-size: 1.3em;
+        }
+
+        .game-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: #000;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.danger {
+            background: linear-gradient(45deg, #ff4757, #c44569);
+        }
+
+        .btn.success {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pattern-btn {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .pattern-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .ai-analysis {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .analysis-result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4757, #ffa502, #00ff88);
+            transition: width 0.3s ease;
+        }
+
+        .recommendations {
+            margin-top: 10px;
+        }
+
+        .recommendation {
+            background: rgba(0, 212, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running { background: #00ff88; }
+        .status-paused { background: #ffa502; }
+        .status-stopped { background: #ff4757; }
+
+        .generation-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .speed-control {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .game-area, .controls {
+                min-width: unset;
+            }
+            
+            .game-canvas {
+                height: 400px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            opacity: 0.7;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #00d4ff;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Conway's Game of Life with AI 🤖</h1>
+        <p>Experience the fascinating world of cellular automata enhanced with artificial intelligence</p>
+    </div>
+
+    <div class="container">
+        <div class="game-area">
+            <div class="panel">
+                <h2>🎯 Game Grid</h2>
+                <canvas id="gameCanvas" class="game-canvas"></canvas>
+                <div class="generation-controls">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="gameStatus">Ready</span>
+                    <div class="speed-control">
+                        <label for="speedSlider">Speed:</label>
+                        <input type="range" id="speedSlider" min="100" max="2000" value="500" step="100">
+                        <span id="speedValue">500ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="panel">
+                <h2>🎮 Game Controls</h2>
+                <div class="button-group">
+                    <button class="btn success" id="playBtn">Play</button>
+                    <button class="btn" id="pauseBtn">Pause</button>
+                    <button class="btn" id="stepBtn">Step</button>
+                    <button class="btn danger" id="clearBtn">Clear</button>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="generation">0</div>
+                        <div class="stat-label">Generation</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="aliveCells">0</div>
+                        <div class="stat-label">Alive Cells</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stability">0%</div>
+                        <div class="stat-label">Stability</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="patterns">0</div>
+                        <div class="stat-label">Patterns</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🧬 Pattern Library</h2>
+                <div class="input-group">
+                    <label for="densitySlider">Random Density:</label>
+                    <input type="range" id="densitySlider" min="0.1" max="0.8" value="0.3" step="0.1">
+                    <span id="densityValue">30%</span>
+                </div>
+                <button class="btn" id="randomBtn">Generate Random</button>
+                
+                <div class="pattern-grid">
+                    <button class="pattern-btn" data-pattern="glider">Glider</button>
+                    <button class="pattern-btn" data-pattern="block">Block</button>
+                    <button class="pattern-btn" data-pattern="blinker">Blinker</button>
+                    <button class="pattern-btn" data-pattern="toad">Toad</button>
+                    <button class="pattern-btn" data-pattern="beacon">Beacon</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🤖 AI Analysis</h2>
+                <button class="btn" id="analyzeBtn">Analyze Pattern</button>
+                <button class="btn" id="predictBtn">Predict Evolution</button>
+                
+                <div id="aiResults" class="ai-analysis">
+                    <div class="loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>AI is thinking...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        class GameOfLifeUI {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gameId = null;
+                this.isPlaying = false;
+                this.gameInterval = null;
+                this.speed = 500;
+                this.grid = [];
+                this.cellSize = 8;
+                this.width = 100;
+                this.height = 75;
+                
+                this.socket = io();
+                this.initializeCanvas();
+                this.bindEvents();
+                this.createGame();
+            }
+
+            initializeCanvas() {
+                this.canvas.width = this.width * this.cellSize;
+                this.canvas.height = this.height * this.cellSize;
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            bindEvents() {
+                // Game controls
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('stepBtn').addEventListener('click', () => this.step());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clear());
+                
+                // Pattern controls
+                document.getElementById('randomBtn').addEventListener('click', () => this.generateRandom());
+                document.querySelectorAll('.pattern-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.placePattern(e.target.dataset.pattern));
+                });
+                
+                // AI controls
+                document.getElementById('analyzeBtn').addEventListener('click', () => this.analyzePattern());
+                document.getElementById('predictBtn').addEventListener('click', () => this.predictEvolution());
+                
+                // Speed control
+                const speedSlider = document.getElementById('speedSlider');
+                speedSlider.addEventListener('input', (e) => {
+                    this.speed = parseInt(e.target.value);
+                    document.getElementById('speedValue').textContent = this.speed + 'ms';
+                    if (this.isPlaying) {
+                        this.pause();
+                        this.play();
+                    }
+                });
+                
+                // Density control
+                const densitySlider = document.getElementById('densitySlider');
+                densitySlider.addEventListener('input', (e) => {
+                    const density = parseFloat(e.target.value);
+                    document.getElementById('densityValue').textContent = Math.round(density * 100) + '%';
+                });
+                
+                // Canvas interaction
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                
+                // Socket events
+                this.socket.on('gameUpdate', (data) => {
+                    if (data.gameId === this.gameId) {
+                        this.updateDisplay(data.state);
+                    }
+                });
+            }
+
+            async createGame() {
+                try {
+                    const response = await fetch('/api/game/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ width: this.width, height: this.height })
+                    });
+                    const data = await response.json();
+                    this.gameId = data.gameId;
+                    this.socket.emit('joinGame', this.gameId);
+                    this.updateDisplay(data.state);
+                    this.setStatus('Ready', 'stopped');
+                } catch (error) {
+                    console.error('Failed to create game:', error);
+                }
+            }
+
+            async play() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                this.setStatus('Running', 'running');
+                
+                this.gameInterval = setInterval(async () => {
+                    await this.step();
+                }, this.speed);
+            }
+
+            pause() {
+                if (!this.isPlaying) return;
+                this.isPlaying = false;
+                clearInterval(this.gameInterval);
+                this.setStatus('Paused', 'paused');
+            }
+
+            async step() {
+                if (!this.gameId) return;
+                
+                try {
+                    const response = await fetch(`/api/game/${this.gameId}/next`, {
+                        method: 'POST'
+                    });
+                    const state = await response.json();
+                    this.updateDisplay(state);
+                } catch (error) {
+                    console.error('Failed to step game:', error);
+                }
+            }
+
+            async clear() {
+                if (!this.gameId) return;
+                
+                try {
+                    const response = await fetch(`/api/game/${this.gameId}/clear`, {
+                        method: 'POST'
+                    });
+                    const state = await response.json();
+                    this.updateDisplay(state);
+                    this.pause();
+                    this.setStatus('Cleared', 'stopped');
+                } catch (error) {
+                    console.error('Failed to clear game:', error);
+                }
+            }
+
+            async generateRandom() {
+                if (!this.gameId) return;
+                
+                const density = parseFloat(document.getElementById('densitySlider').value);
+                
+                try {
+                    const response = await fetch(`/api/game/${this.gameId}/pattern`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patternName: 'random', density })
+                    });
+                    const state = await response.json();
+                    this.updateDisplay(state);
+                    this.setStatus('Pattern Generated', 'stopped');
+                } catch (error) {
+                    console.error('Failed to generate random pattern:', error);
+                }
+            }
+
+            async placePattern(patternName) {
+                if (!this.gameId) return;
+                
+                try {
+                    const response = await fetch(`/api/game/${this.gameId}/pattern`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            patternName, 
+                            x: Math.floor(this.width / 2), 
+                            y: Math.floor(this.height / 2) 
+                        })
+                    });
+                    const state = await response.json();
+                    this.updateDisplay(state);
+                    this.setStatus(`${patternName} placed`, 'stopped');
+                } catch (error) {
+                    console.error('Failed to place pattern:', error);
+                }
+            }
+
+            async handleCanvasClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / this.cellSize);
+                const y = Math.floor((e.clientY - rect.top) / this.cellSize);
+                
+                if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                    const currentState = this.grid[y] && this.grid[y][x];
+                    
+                    try {
+                        await fetch(`/api/game/${this.gameId}/cell`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ x, y, alive: !currentState })
+                        });
+                    } catch (error) {
+                        console.error('Failed to toggle cell:', error);
+                    }
+                }
+            }
+
+            async analyzePattern() {
+                if (!this.grid.length) return;
+                
+                this.showLoading();
+                
+                try {
+                    const response = await fetch('/api/ai/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ grid: this.grid })
+                    });
+                    const analysis = await response.json();
+                    this.displayAnalysis(analysis);
+                } catch (error) {
+                    console.error('Failed to analyze pattern:', error);
+                    this.hideLoading();
+                }
+            }
+
+            async predictEvolution() {
+                if (!this.grid.length) return;
+                
+                this.showLoading();
+                
+                try {
+                    const response = await fetch('/api/ai/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ grid: this.grid, generations: 5 })
+                    });
+                    const prediction = await response.json();
+                    this.displayPrediction(prediction);
+                } catch (error) {
+                    console.error('Failed to predict evolution:', error);
+                    this.hideLoading();
+                }
+            }
+
+            updateDisplay(state) {
+                this.grid = state.grid;
+                this.drawGrid();
+                
+                // Update stats
+                document.getElementById('generation').textContent = state.generation;
+                document.getElementById('aliveCells').textContent = state.aliveCells;
+                document.getElementById('stability').textContent = Math.round(state.stability) + '%';
+                document.getElementById('patterns').textContent = state.detectedPatterns.length;
+            }
+
+            drawGrid() {
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.fillStyle = '#00ff88';
+                for (let y = 0; y < this.height; y++) {
+                    for (let x = 0; x < this.width; x++) {
+                        if (this.grid[y] && this.grid[y][x]) {
+                            this.ctx.fillRect(
+                                x * this.cellSize, 
+                                y * this.cellSize, 
+                                this.cellSize - 1, 
+                                this.cellSize - 1
+                            );
+                        }
+                    }
+                }
+            }
+
+            setStatus(text, type) {
+                document.getElementById('gameStatus').textContent = text;
+                const indicator = document.getElementById('statusIndicator');
+                indicator.className = `status-indicator status-${type}`;
+            }
+
+            showLoading() {
+                document.querySelector('.loading').style.display = 'block';
+            }
+
+            hideLoading() {
+                document.querySelector('.loading').style.display = 'none';
+            }
+
+            displayAnalysis(analysis) {
+                this.hideLoading();
+                
+                const resultsDiv = document.getElementById('aiResults');
+                resultsDiv.innerHTML = `
+                    <div class="analysis-result">
+                        <h3>🔍 Pattern Analysis</h3>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${analysis.interestScore}%"></div>
+                        </div>
+                        <p><strong>Interest Score:</strong> ${Math.round(analysis.interestScore)}%</p>
+                        <p><strong>Density:</strong> ${Math.round(analysis.density * 100)}%</p>
+                        <p><strong>Clustering:</strong> ${Math.round(analysis.clustering * 100)}%</p>
+                        <p><strong>Entropy:</strong> ${Math.round(analysis.entropy * 100)}%</p>
+                        
+                        <div class="recommendations">
+                            <h4>💡 AI Recommendations:</h4>
+                            ${analysis.recommendation.map(rec => 
+                                `<div class="recommendation">${rec}</div>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            displayPrediction(prediction) {
+                this.hideLoading();
+                
+                const resultsDiv = document.getElementById('aiResults');
+                resultsDiv.innerHTML = `
+                    <div class="analysis-result">
+                        <h3>🔮 Evolution Prediction</h3>
+                        <p><strong>Overall Trend:</strong> ${prediction.overallTrend}</p>
+                        <p><strong>Recommendation:</strong> ${prediction.recommendation}</p>
+                        
+                        <h4>📊 Generation Forecast:</h4>
+                        ${prediction.predictions.map((pred, i) => `
+                            <div style="margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                                <strong>Gen ${pred.generation}:</strong> ${pred.aliveCells} cells, 
+                                Interest: ${Math.round(pred.interestScore)}%, 
+                                Outcome: ${pred.prediction}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize the game when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new GameOfLifeUI();
+        });
+    </script>
+</body>
+</html>
